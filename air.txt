@@ -1,0 +1,108 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import PowerTransformer
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import r2_score,mean_absolute_error,mean_squared_error
+
+data.shape
+
+data=pd.read_csv('/content/AirQuality.csv',sep=';')
+data
+
+data.drop(columns=['Unnamed: 15','Unnamed: 16','Date','Time'],inplace=True)
+data
+
+cols_to_fix =['CO(GT)','C6H6(GT)','T','RH','AH']
+for col in cols_to_fix:
+    data[col]=data[col].str.replace(',','.')
+    data[col]=data[col].astype(float)
+
+data
+
+data = data.astype({
+    'CO(GT)': 'float64',
+    'C6H6(GT)': 'float64',
+    'T': 'float64',
+    'RH': 'float64',
+    'AH': 'float64'
+})
+
+
+
+data
+
+data.dropna(inplace=True)
+data
+
+data.drop_duplicates(inplace=True,ignore_index=True)
+data
+
+def remove_outliers(data,column,lower=0.01,upper=0.99):
+      low=data[column].quantile(lower)
+      high=data[column].quantile(upper)
+      return data[(data[column]>=low) & (data[column]<=high)]
+
+
+df=data.copy()
+
+for col in df.columns:
+    df=remove_outliers(df,col)
+
+df=df.reset_index(drop=True)
+
+
+pt=PowerTransformer(method='yeo-johnson')
+df=pd.DataFrame(pt.fit_transform(df),columns=df.columns)
+data
+
+4.Error Correction
+print("Missing Values:\n",df.isnull().sum())
+
+print("\nData Types:\n",df.dtypes)
+
+
+z_scores=(df-df.mean())/df.std()
+extreme_values=(np.abs(z_scores)>3).sum()
+
+print("\nExtreme values(>3 std dev:P\n,",extreme_values)
+
+5.Model building
+
+# 'X' mein features hain aur 'y' mein target variable 'AH' hai
+X = df.drop('AH', axis=1)  # 'AH' ko target variable bana rahe hain
+y = df['AH']  # 'AH' target variable hai
+
+# Data ko 80% train aur 20% test mein divide karte hain
+X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.8, random_state=6, shuffle=True)
+
+# **Linear Regression Model**
+lr_model = LinearRegression()
+lr_model.fit(X_train, y_train)  # Model ko train karte hain
+lr_pred = lr_model.predict(X_test)  # Test data par predictions karte hain
+
+# **Decision Tree Regressor Model**
+dt_model = DecisionTreeRegressor()
+dt_model.fit(X_train, y_train)  # Model ko train karte hain
+dt_pred = dt_model.predict(X_test)  # Test data par predictions karte hain
+
+# Model ki performance evaluate karte hain
+def evaluate_model(name, y_true, y_pred):
+    r2 = r2_score(y_true, y_pred)  # R-squared score
+    mae = mean_absolute_error(y_true, y_pred)  # Mean absolute error
+    mse = mean_squared_error(y_true, y_pred)  # Mean squared error
+    print(f"\n{name} Model:")
+    print(f" R² Score     : {r2:.4f}")
+    print(f" MAE          : {mae:.4f}")
+    print(f" MSE          : {mse:.4f}")
+    print(f" Accuracy (%) : {r2*100:.2f}%")
+
+# Models ki evaluation karte hain
+evaluate_model("Linear Regression", y_test, lr_pred)
+evaluate_model("Decision Tree Regressor", y_test, dt_pred)
+
